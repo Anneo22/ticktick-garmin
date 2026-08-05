@@ -1,0 +1,3 @@
+<properties>
+    <property id="relayUrl" type="string">https://example.invalid</property>
+</properties>
