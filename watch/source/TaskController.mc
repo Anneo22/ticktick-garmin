@@ -14,6 +14,7 @@ class TaskController {
     var selected;
     var mode;
     var projectId;
+    var projectName;
     var status;
     var verificationUrl;
     var pendingTask;
@@ -36,6 +37,7 @@ class TaskController {
         selected = 0;
         mode = "today";
         projectId = null;
+        projectName = null;
         status = store.getRelayToken() == null ? "unpaired" : "cached";
         verificationUrl = store.getVerificationUrl();
         pendingTask = null;
@@ -355,16 +357,20 @@ class TaskController {
         if (mode.equals("today")) {
             mode = "overdue";
             projectId = null;
+            projectName = null;
             tasks = [];
         } else if (mode.equals("overdue")) {
             mode = "projects";
             projectId = null;
+            projectName = null;
         } else if (mode.equals("projects")) {
             mode = "account";
             projectId = null;
+            projectName = null;
         } else {
             mode = "today";
             projectId = null;
+            projectName = null;
             tasks = store.getTasks();
         }
         if (mode.equals("account")) {
@@ -388,6 +394,7 @@ class TaskController {
         }
         mode = "project";
         projectId = project["id"];
+        projectName = project["name"];
         selected = 0;
         nextCursor = null;
         tasks = [];
@@ -410,6 +417,7 @@ class TaskController {
         if (mode.equals("project")) {
             mode = "projects";
             projectId = null;
+            projectName = null;
             selected = 0;
             nextCursor = null;
             refresh();
@@ -418,6 +426,7 @@ class TaskController {
         if (mode.equals("projects") || mode.equals("overdue") || mode.equals("account")) {
             mode = "today";
             projectId = null;
+            projectName = null;
             selected = 0;
             nextCursor = null;
             tasks = store.getTasks();
@@ -524,6 +533,7 @@ class TaskController {
         projects = [];
         mode = "today";
         projectId = null;
+        projectName = null;
         selected = 0;
         verificationUrl = null;
         reconciliationRequired = false;
@@ -535,6 +545,7 @@ class TaskController {
         store.unpair();
         tasks = [];
         projects = [];
+        projectName = null;
         status = "authorization_expired";
         busy = false;
         requestUpdate();
