@@ -1,3 +1,3 @@
 <properties>
-    <property id="relayUrl" type="string">https://example.invalid</property>
+    <property id="relayUrl" type="string">https://ticktick-garmin-relay.russo-emanuele22.workers.dev</property>
 </properties>
