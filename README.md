@@ -6,7 +6,7 @@ TickTick Tasks for Garmin is an independent Connect IQ watch app for browsing an
 
 I wanted TickTick on my Garmin without paying another subscription. The result is a small watch app, backed by a narrow OAuth relay, that keeps the common task path usable when the phone connection drops.
 
-![The unpaired app on a Fenix 8 simulator](docs/assets/fenix8-pairing.jpeg)
+![A synced Today list with three TickTick tasks on a Fenix 8 simulator](docs/assets/fenix8-today.jpeg)
 
 ## What works
 
@@ -60,11 +60,9 @@ The relay is a Cloudflare Worker with D1 storage and WebCrypto token encryption.
 
 Do not put production values in `wrangler.toml`, source files, the watch package, fixtures, or logs. See [the OAuth relay decision](docs/adr/0001-oauth-relay.md) and [privacy policy](docs/privacy.md) for the boundary.
 
-## Why shouldn't I use this?
+## Current status
 
-This is a verified release candidate, not a live Store app. The relay is deployed and its pairing and OAuth redirect boundary pass live checks. Final TickTick consent, exact Today-filter behaviour, physical Fenix 8 acceptance, and Garmin review still need to pass. The first release also does not create, edit, move, delete, or reopen tasks.
-
-If you need a finished multi-provider app today, this repository is the wrong answer. If you want a small TickTick-only client whose unsupported claims are written down instead of hidden, it is ready for the remaining live tests.
+This is a verified release candidate, not a live Store app. The relay is deployed and its pairing and OAuth redirect boundary pass live checks. Final TickTick consent, exact Today-filter behaviour, physical Fenix 8 acceptance, and Garmin review still need to pass. The first release browses and completes tasks; it does not create, edit, move, delete, or reopen them.
 
 The app has no separate subscription, ads, or analytics. A TickTick account is required, and cloud hosting cannot be promised free forever.
 
