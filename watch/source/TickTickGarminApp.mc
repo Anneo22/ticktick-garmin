@@ -17,6 +17,6 @@ class TickTickGarminApp extends App.AppBase {
     function getInitialView() {
         var view = new TaskListView(controller);
         controller.attach(view);
-        return [view, new TaskListDelegate(controller)];
+        return [view, new TaskListDelegate(controller, view)];
     }
 }

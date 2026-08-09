@@ -234,7 +234,7 @@ test("pairing page is self-contained, safely prefills a code, and posts only to 
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html/);
-  assert.match(response.headers.get("content-security-policy") ?? "", /form-action 'self'/);
+  assert.match(response.headers.get("content-security-policy") ?? "", /form-action 'self' https:\/\/ticktick\.com(?:;|$)/);
   assert.match(html, /action="\/v1\/pair\/authorize"/);
   assert.match(html, /value="ABC234"/);
   assert.doesNotMatch(html, /client[_-]?secret|access[_-]?token/i);

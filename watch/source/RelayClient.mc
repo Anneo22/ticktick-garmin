@@ -1,18 +1,84 @@
-using Toybox.Application as App;
 using Toybox.Communications as Comm;
+using Toybox.Timer as Timer;
 import Toybox.Lang;
 
-class RelayClient {
-    var store;
+class RelayRequest {
     var callback;
+    var requestTimer;
+    var finished;
+    var timeoutMs;
+
+    function initialize(done, timeout) {
+        callback = done;
+        requestTimer = null;
+        finished = false;
+        timeoutMs = timeout;
+    }
+
+    function start(url, payload, options) {
+        try {
+            requestTimer = new Timer.Timer();
+            requestTimer.start(method(:onTimeout), timeoutMs, false);
+            Comm.makeWebRequest(url, payload, options, method(:onResponse));
+        } catch (error) {
+            cancel();
+            return false;
+        }
+        return true;
+    }
+
+    function cancel() as Void {
+        finished = true;
+        callback = null;
+        if (requestTimer != null) {
+            try {
+                requestTimer.stop();
+            } catch (error) {
+            }
+            requestTimer = null;
+        }
+    }
+
+    function onTimeout() as Void {
+        finish(-1001, null, false);
+    }
+
+    function onResponse(responseCode as Number, data as Dictionary or String or Null) as Void {
+        finish(responseCode, data, true);
+    }
+
+    function finish(responseCode, data, stopTimer) as Void {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        if (stopTimer && requestTimer != null) {
+            try {
+                requestTimer.stop();
+            } catch (error) {
+            }
+        }
+        requestTimer = null;
+        var done = callback;
+        callback = null;
+        if (done != null) {
+            done.invoke(responseCode, data);
+        }
+    }
+}
+
+class RelayClient {
+    const RELAY_URL = "https://ticktick-garmin-relay.russo-emanuele22.workers.dev";
+    const REQUEST_TIMEOUT_MS = 20000;
+
+    var store;
+    var activeRequest;
+    var activeCallback;
 
     function initialize(localStore) {
         store = localStore;
-        callback = null;
-    }
-
-    function relayUrl() {
-        return App.Properties.getValue("relayUrl");
+        activeRequest = null;
+        activeCallback = null;
     }
 
     function jsonOptions(method, authenticated) {
@@ -30,12 +96,35 @@ class RelayClient {
     }
 
     function request(path, payload, method, authenticated, done) {
-        if (callback != null) {
+        if (activeRequest != null) {
             return false;
         }
-        callback = done;
-        Comm.makeWebRequest(relayUrl() + path, payload, jsonOptions(method, authenticated), method(:onResponse));
+        activeCallback = done;
+        activeRequest = new RelayRequest(method(:finishRequest), REQUEST_TIMEOUT_MS);
+        var options;
+        try {
+            options = jsonOptions(method, authenticated);
+        } catch (error) {
+            activeRequest.cancel();
+            activeRequest = null;
+            activeCallback = null;
+            return false;
+        }
+        if (!activeRequest.start(RELAY_URL + path, payload, options)) {
+            activeRequest = null;
+            activeCallback = null;
+            return false;
+        }
         return true;
+    }
+
+    function finishRequest(responseCode, data) as Void {
+        activeRequest = null;
+        var done = activeCallback;
+        activeCallback = null;
+        if (done != null) {
+            done.invoke(responseCode, data);
+        }
     }
 
     function startPair(done) {
@@ -96,11 +185,4 @@ class RelayClient {
         );
     }
 
-    function onResponse(responseCode as Number, data as Dictionary or String or Null) as Void {
-        var done = callback;
-        callback = null;
-        if (done != null) {
-            done.invoke(responseCode, data);
-        }
-    }
 }
