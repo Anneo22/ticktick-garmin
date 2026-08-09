@@ -38,7 +38,7 @@ class TaskController {
         mode = "today";
         projectId = null;
         projectName = null;
-        status = store.getRelayToken() == null ? "unpaired" : "cached";
+        status = store.getRelayToken() == null ? (store.getDeviceSecret() == null ? "unpaired" : "pair_pending") : "cached";
         verificationUrl = store.getVerificationUrl();
         pendingTask = null;
         pendingMutationId = null;
@@ -113,18 +113,36 @@ class TaskController {
     }
 
     function beginOrPollPair() {
+        if (!phoneReady()) {
+            recoverRejectedRequest("phone_unavailable");
+            return;
+        }
         var secret = store.getDeviceSecret();
         busy = true;
         status = "pairing";
         requestUpdate();
         if (secret == null) {
-            relay.startPair(method(:onPairStarted));
+            if (!relay.startPair(method(:onPairStarted))) {
+                recoverRejectedRequest("network_error");
+            }
         } else {
             if (verificationUrl != null) {
                 Comm.openWebPage(verificationUrl, {"code" => store.getUserCode()}, null);
             }
-            relay.pollPair(secret, method(:onPairPolled));
+            if (!relay.pollPair(secret, method(:onPairPolled))) {
+                recoverRejectedRequest("network_error");
+            }
         }
+    }
+
+    function phoneReady() {
+        return Sys.getDeviceSettings().phoneConnected;
+    }
+
+    function recoverRejectedRequest(failureStatus) {
+        busy = false;
+        status = failureStatus;
+        requestUpdate();
     }
 
     function onPairStarted(code, response) {
@@ -136,7 +154,7 @@ class TaskController {
             status = "pair_pending";
             Comm.openWebPage(verificationUrl, {"code" => store.getUserCode()}, null);
         } else {
-            status = "network_error";
+            status = pairingFailureStatus(code);
         }
         requestUpdate();
     }
@@ -158,9 +176,22 @@ class TaskController {
             verificationUrl = null;
             status = "pair_expired";
         } else {
-            status = "network_error";
+            status = pairingFailureStatus(code);
         }
         requestUpdate();
+    }
+
+    function pairingFailureStatus(code) {
+        if (code == -1001 || code == -2 || code == -3 || code == -300) {
+            return "request_timeout";
+        }
+        if (code == -1 || code == -4 || code == -5 || code == -101 || code == -103 || code == -104) {
+            return "phone_unavailable";
+        }
+        if (code == -102 || code == -200 || code == -201 || code == -202 || code == -400 || code >= 400) {
+            return "service_unavailable";
+        }
+        return "network_error";
     }
 
     function invalidPairing(response) {
@@ -334,6 +365,9 @@ class TaskController {
     }
 
     function move(delta) {
+        if (busy) {
+            return;
+        }
         var items = activeItems();
         if (items.size() == 0) {
             return;
@@ -343,6 +377,18 @@ class TaskController {
             return;
         }
         selected = (selected + delta + items.size()) % items.size();
+        requestUpdate();
+    }
+
+    function select(index) {
+        if (busy) {
+            return;
+        }
+        var items = activeItems();
+        if (index < 0 || index >= items.size()) {
+            return;
+        }
+        selected = index;
         requestUpdate();
     }
 

@@ -56,7 +56,7 @@ function pairingPage(request: Request): Response {
 <title>Pair TickTick for Garmin</title><style>body{font:18px system-ui;max-width:34rem;margin:10vh auto;padding:1.25rem;background:#111;color:#fff}input,button{box-sizing:border-box;width:100%;font:inherit;padding:.8rem;margin:.4rem 0}button{background:#f97316;color:#111;border:0;font-weight:700}</style></head>
 <body><h1>Pair TickTick for Garmin</h1><p>Enter the six-character code shown on your watch. You will then sign in directly on TickTick.</p>
 <form action="/v1/pair/authorize" method="get"><label for="code">Pairing code</label><input id="code" name="code" minlength="6" maxlength="6" pattern="[A-Z2-9]{6}" autocomplete="one-time-code" value="${safeCode}" required><button type="submit">Continue to TickTick</button></form></body></html>`;
-  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", "x-content-type-options": "nosniff" } });
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://ticktick.com; base-uri 'none'; frame-ancestors 'none'", "x-content-type-options": "nosniff" } });
 }
 
 function pairingCompletePage(): Response {

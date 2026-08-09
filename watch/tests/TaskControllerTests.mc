@@ -61,6 +61,48 @@ class NoopRelay {
         lastAction = "unpair";
         return true;
     }
+
+    function startPair(done) {
+        lastAction = "startPair";
+        return true;
+    }
+
+    function pollPair(deviceSecret, done) {
+        lastAction = "pollPair";
+        return true;
+    }
+}
+
+class ReadyTaskController extends TaskController {
+    function initialize() {
+        TaskController.initialize();
+    }
+
+    function phoneReady() {
+        return true;
+    }
+}
+
+class OfflineTaskController extends TaskController {
+    function initialize() {
+        TaskController.initialize();
+    }
+
+    function phoneReady() {
+        return false;
+    }
+}
+
+class RelayCallbackRecorder {
+    var lastCode;
+
+    function initialize() {
+        lastCode = null;
+    }
+
+    function record(code, response) {
+        lastCode = code;
+    }
 }
 
 (:test)
@@ -461,6 +503,137 @@ function mutationIdIsOpaqueAndBounded(logger as Test.Logger) as Boolean {
     Test.assert(id.length() <= 96);
     Test.assert(id.find("task-") == null);
     Test.assert(!id.equals(controller.createMutationId()));
+    return true;
+}
+
+(:test)
+function directSelectionIsBoundedAndDoesNotCompleteImmediately(logger as Test.Logger) as Boolean {
+    var controller = new TaskController();
+    controller.store = new PairedTestStore();
+    controller.tasks = [
+        {"id" => "task-1", "projectId" => "project-1", "title" => "First"},
+        {"id" => "task-2", "projectId" => "project-1", "title" => "Second"}
+    ];
+    controller.select(1);
+    Test.assertEqual(1, controller.selected);
+    Test.assert(!controller.confirmingCompletion);
+    controller.select(-1);
+    Test.assertEqual(1, controller.selected);
+    controller.select(2);
+    Test.assertEqual(1, controller.selected);
+    return true;
+}
+
+(:test)
+function pairingTapUsesTheWholeScreen(logger as Test.Logger) as Boolean {
+    var controller = new ReadyTaskController();
+    controller.store.unpair();
+    controller.relay = new NoopRelay();
+    var view = new TaskListView(controller);
+    view.screenWidth = 454;
+    view.screenHeight = 454;
+    Test.assert(view.handleTap([1, 1]));
+    Test.assertEqual("startPair", controller.relay.lastAction);
+    Test.assert(controller.busy);
+    controller.store.unpair();
+    return true;
+}
+
+(:test)
+function unavailablePhoneNeverEntersBusyPairing(logger as Test.Logger) as Boolean {
+    var controller = new OfflineTaskController();
+    controller.store.unpair();
+    controller.relay = new NoopRelay();
+    controller.beginOrPollPair();
+    Test.assert(!controller.busy);
+    Test.assertEqual("phone_unavailable", controller.status);
+    Test.assert(controller.relay.lastAction == null);
+    return true;
+}
+
+(:test)
+function busyControllerRejectsNavigation(logger as Test.Logger) as Boolean {
+    var controller = new TaskController();
+    controller.store = new PairedTestStore();
+    controller.tasks = [
+        {"id" => "task-1", "projectId" => "project-1", "title" => "First"},
+        {"id" => "task-2", "projectId" => "project-1", "title" => "Second"}
+    ];
+    controller.busy = true;
+    controller.move(1);
+    controller.select(1);
+    Test.assertEqual(0, controller.selected);
+    return true;
+}
+
+(:test)
+function relayCompletionReleasesOwnedRequestBeforeCallback(logger as Test.Logger) as Boolean {
+    var client = new RelayClient(new PairedTestStore());
+    var recorder = new RelayCallbackRecorder();
+    client.activeRequest = new RelayRequest(null, 1);
+    client.activeCallback = recorder.method(:record);
+    client.finishRequest(200, {"ok" => true});
+    Test.assert(client.activeRequest == null);
+    Test.assert(client.activeCallback == null);
+    Test.assertEqual(200, recorder.lastCode);
+    return true;
+}
+
+(:test)
+function pairingTimeoutUnlocksRetry(logger as Test.Logger) as Boolean {
+    var controller = new TaskController();
+    controller.store.unpair();
+    controller.busy = true;
+    controller.status = "pairing";
+    controller.onPairStarted(-1001, null);
+    Test.assert(!controller.busy);
+    Test.assertEqual("request_timeout", controller.status);
+    return true;
+}
+
+(:test)
+function pairingFailuresKeepActionableCause(logger as Test.Logger) as Boolean {
+    var controller = new TaskController();
+    controller.store.unpair();
+    controller.busy = true;
+    controller.onPairStarted(-104, null);
+    Test.assertEqual("phone_unavailable", controller.status);
+    controller.busy = true;
+    controller.onPairStarted(-300, null);
+    Test.assertEqual("request_timeout", controller.status);
+    controller.busy = true;
+    controller.onPairStarted(503, {"ok" => false});
+    Test.assertEqual("service_unavailable", controller.status);
+    return true;
+}
+
+(:test)
+function pairingUxUsesCompactSpecificLabels(logger as Test.Logger) as Boolean {
+    var controller = new TaskController();
+    controller.store.unpair();
+    var view = new TaskListView(controller);
+    Test.assertEqual("START PAIRING", view.pairActionLabel(null));
+    controller.busy = true;
+    Test.assertEqual("CONNECTING", view.pairActionLabel(null));
+    Test.assertEqual("CHECKING", view.pairActionLabel("ABC123"));
+    controller.busy = false;
+    controller.status = "phone_unavailable";
+    Test.assertEqual("TRY AGAIN", view.pairActionLabel(null));
+    Test.assertEqual("Open Garmin Connect", view.statusLabel());
+    controller.status = "service_unavailable";
+    Test.assertEqual("Setup unavailable", view.statusLabel());
+    return true;
+}
+
+(:test)
+function pendingPairingRestoresHonestStatus(logger as Test.Logger) as Boolean {
+    var seed = new LocalStore();
+    seed.unpair();
+    seed.setPendingPair("device-secret", "ABC123", "https://example.invalid/pair");
+    var controller = new TaskController();
+    Test.assertEqual("pair_pending", controller.status);
+    Test.assertEqual("ABC123", controller.store.getUserCode());
+    controller.store.unpair();
     return true;
 }
 
