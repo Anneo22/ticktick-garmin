@@ -72,12 +72,4 @@ Copyright 2026 Anneo22. Licensed under [Apache-2.0](LICENSE).
 
 TickTick Tasks for Garmin is independent and is not affiliated with TickTick, Garmin, or Cloudflare.
 
-<p>
-  <a href="https://abcastor.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/castor-footer-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="docs/castor-footer-light.svg">
-      <img src="docs/castor-footer-light.png" width="800" alt="Chip, the Castor beaver, by Castor, we give a dam">
-    </picture>
-  </a>
-</p>
+<p><a href="https://abcastor.com"><img src="docs/castor-footer.svg" width="350" alt="Chip, the Castor beaver, Castor, we give a dam"></a></p>
